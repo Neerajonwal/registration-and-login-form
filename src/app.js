@@ -1,10 +1,10 @@
-require('dotenv').config();
+require('dotenv').config()
 const express = require("express");
 const app = express();
 const hbs = require("hbs");
-const path = require("path");
 const Register = require("./models/registers");
 const bcrypt = require("bcryptjs");
+const path = require("path");
 const cookieParser = require('cookie-parser');
 const auth = require("./middleware/auth")
 const jwt = require('jsonwebtoken');
@@ -18,11 +18,12 @@ const static_path = path.join(__dirname, "../public");
 const partials_path = path.join(__dirname, "../templates/partials");
 const template_path = path.join(__dirname, "../templates/views");
 
-// console.log(process.env.SECRATE_KEY)
+// console.log(process.env.SECRET_KEY);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
 app.use(express.static(static_path));
 app.set("view engine", "hbs");
 app.set("views", template_path);
@@ -36,27 +37,32 @@ app.get("/secret", auth, (req, res) => {
     res.render("secret")
 });
 
+
+
+
 app.get("/logout", auth, async (req, res) => {
     try {
-        console.log(req.user)
-
-        // logout from single device
-        req.user.tokens = req.user.tokens.filter((currentelemnt) => {
-            return currentelemnt.token != req.token
-        })
+        console.log(req.user);
+        // for single logout
+        // req.user.tokens = req.user.tokens.filter((currElement) => {
+        //     return currElement.token != req.token
+        // })
 
         // logout from all devices
-        req.user.tokens = []
+        req.user.token = [];
+        res.clearCookie("jwt");
 
-        res.clearCookie("jwt")
-        console.log("logout successful")
-        await req.user.save();
-        res.status(201).render('login')
-    }
-    catch (err) {
+        // res.clearCookie("jwt");
+        console.log("logout succesfully")
+        res.render("login")
+    } catch (err) {
         res.status(500).send(err)
     }
 })
+
+
+
+
 
 app.get("/index", (req, res) => {
     res.render("index")
@@ -64,8 +70,21 @@ app.get("/index", (req, res) => {
 app.get("/login", (req, res) => {
     res.render("login")
 });
-app.get("/register", (req, res) => {
-    res.render("register")
+
+app.get("/register", (req,res)=>{
+res.render("register")
+});
+
+
+
+app.get("/register/get", async (req, res) => {
+    try {
+        const registerData = await Register.find();
+        res.json(registerData)
+        console.log(registerData);
+    } catch (e) {
+        res.status(404).send(e)
+    }
 });
 
 
@@ -77,6 +96,7 @@ app.post("/register", async (req, res) => {
 
         if (password === cpassword) {
             const passwordHash = await bcrypt.hash(password, 10);
+
             const registerEmployee = new Register({
                 firstname: req.body.firstname,
                 lastname: req.body.lastname,
@@ -85,14 +105,32 @@ app.post("/register", async (req, res) => {
                 phone: req.body.phone,
                 age: req.body.age,
                 password: passwordHash,
-                confirmpassword: req.body.confirmpassword
+                confirmpassword: passwordHash
+                // req.body.confirmpassword
             })
 
+            const token = await registerEmployee.generateAuthToken();
+            // const token = jwt.sign({ _id: this._id }, 'shhhhh');
+            console.log("this is token no." + token)
+
             console.log("the succs part" + registerEmployee)
-            
+
+            // the res.cookie() function is used to set the cookie name to value.
+            // the value parameter may be a string or object converted to JSON.
+
+            // syntax:
+
+            // res.cookie(name, value, [option])
+
+            res.cookie("jwt", token, {
+                expires: new Date(Date.now() + 600000),
+                httpOnly: true
+            });
+            console.log(cookie);
+
             const registered = await registerEmployee.save();
-           
-            res.status(201).render("login")
+
+            res.status(201).render("index")
             // json(registered);
         } else {
             res.send("password are not matching")
@@ -102,6 +140,21 @@ app.post("/register", async (req, res) => {
         res.status(400).send(err)
     }
 });
+
+
+app.patch("/update/:id", async (req, res) => {
+    try {
+        const _id = req.params.id;
+        const doneData = await Register.findByIdAndUpdate(_id, req.body,
+            {
+                new: true,
+            });
+        res.send(doneData);
+    } catch (e) {
+        res.status(404).send(e)
+    }
+});
+
 
 app.post("/login", async (req, res) => {
     try {
@@ -113,29 +166,38 @@ app.post("/login", async (req, res) => {
         console.log(useremail)
         if (useremail) {
             const isMatch = await bcrypt.compare(password, useremail.password)
+            const token = await useremail.generateAuthToken();
+            // var token = jwt.sign({ email: useremail.email }, 'shhhhh'); this the token generate code 
+            console.log("the login token" + token)
+            res.cookie("jwt", token, {
+                expires: new Date(Date.now() + 30000),
+                httpOnly: true
+            });
+
+            console.log(`this is the cookie awasome : ${req.cookies.jwt}`);
+
 
             if (isMatch) {
-                var token = jwt.sign({ email: useremail.email }, 'shhhhh');
-                res.status(201).render("secret")
+                res.status(201).render("index")
                 // json({useremail,token})
 
             } else {
                 res.send("invalid password details")
             }
-        }else{
-            res.status(400).send("user  dosenot exist") 
+        } else {
+            res.status(400).send("user  dosenot exist")
         }
-       
+
     } catch (err) {
         res.status(400).send("invalid log in  details")
 
     }
 
-
-
-    
-
 })
+
+
+
+
 
 app.listen(port, () => {
     console.log(`live srever ${port}`)

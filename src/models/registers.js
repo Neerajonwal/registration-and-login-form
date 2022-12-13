@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
+// const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const employeeSchema = new mongoose.Schema({
@@ -40,15 +40,35 @@ const employeeSchema = new mongoose.Schema({
     tokens: [{
         token: {
             type: String,
-            required: true 
+            required: true
         }
     }]
 
 });
 
+//generating tokens 
+
+employeeSchema.methods.generateAuthToken = async function () {
+    try {
+        // console.log(this._id)
+        const token = jwt.sign({ _id: this._id.toString() }, 'mynameisneerajandmansijoriyawife')
+        console.log("generate token no." + token)
+        this.tokens = this.tokens.concat({ token: token })
+        await this.save();
+        return token;
+    } catch (error) {
+        res.send("this error part" + error);
+        // console.log("the error part" + error)
+
+
+        
+    }
+}
+
 
 
 // now we need to create a collections
+
 
 const Register = new mongoose.model("Register", employeeSchema);
 
