@@ -71,8 +71,8 @@ app.get("/login", (req, res) => {
     res.render("login")
 });
 
-app.get("/register", (req,res)=>{
-res.render("register")
+app.get("/register", (req, res) => {
+    res.render("register")
 });
 
 
@@ -105,9 +105,10 @@ app.post("/register", async (req, res) => {
                 phone: req.body.phone,
                 age: req.body.age,
                 password: passwordHash,
-                confirmpassword: passwordHash
+                confirmpassword: req.body.confirmpassword
                 // req.body.confirmpassword
-            })
+            });
+
 
             const token = await registerEmployee.generateAuthToken();
             // const token = jwt.sign({ _id: this._id }, 'shhhhh');
@@ -129,9 +130,9 @@ app.post("/register", async (req, res) => {
             console.log(cookie);
 
             const registered = await registerEmployee.save();
-
+            // console.log(registered)
             res.status(201).render("index")
-            // json(registered);
+            // .json(registered);
         } else {
             res.send("password are not matching")
         }
@@ -142,18 +143,7 @@ app.post("/register", async (req, res) => {
 });
 
 
-app.patch("/update/:id", async (req, res) => {
-    try {
-        const _id = req.params.id;
-        const doneData = await Register.findByIdAndUpdate(_id, req.body,
-            {
-                new: true,
-            });
-        res.send(doneData);
-    } catch (e) {
-        res.status(404).send(e)
-    }
-});
+
 
 
 app.post("/login", async (req, res) => {
@@ -195,6 +185,18 @@ app.post("/login", async (req, res) => {
 
 })
 
+app.patch("/update/:id", async (req, res) => {
+    try {
+        const _id = req.params.id;
+        const doneData = await Register.findByIdAndUpdate(_id, req.body,
+            {
+                new: true,
+            });
+        res.send(doneData);
+    } catch (e) {
+        res.status(404).send(e)
+    }
+});
 
 
 
